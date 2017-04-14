@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// START OMIT
+// DECL> OMIT
 // Channel represents some absctract channel over net.Conn.
 type Channel struct {
 	conn net.Conn
@@ -13,11 +13,13 @@ type Channel struct {
 }
 
 func NewChannel(conn net.Conn) *Channel {
-	c := &Channel{conn}
-	go c.reader() // Stack growth.
-	go c.writer() // Stack growth.
+	c := &Channel{conn, make(chan Packet, N)}
+	go c.reader()
+	go c.writer()
 }
 
+// DECL< OMIT
+// IMPL> OMIT
 func (c *Channel) reader() {
 	buf := bufio.NewReader(c.conn) // Allocation.
 	for {
@@ -25,8 +27,6 @@ func (c *Channel) reader() {
 		// ...
 	}
 }
-
-// END OMIT
 
 func (c *Channel) writer() {
 	buf := bufio.NewWriter(c.conn) // Allocation.
@@ -36,3 +36,5 @@ func (c *Channel) writer() {
 		buf.Flush()
 	}
 }
+
+// IMPL< OMIT

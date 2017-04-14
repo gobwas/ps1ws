@@ -1,0 +1,11 @@
+GET / HTTP/1.1
+Host: example.org
+Connection: Upgrade
+Sec-Websocket-Key: A3xNe7sEB9HixkmBhVrYaA==
+Sec-Websocket-Version: 13
+Upgrade: websocket
+
+HTTP/1.1 101 Switching Protocols
+Connection: Upgrade
+Sec-Websocket-Accept: ksu0wXWG+YmkVx+KQR2agP0cQn4=
+Upgrade: websocket

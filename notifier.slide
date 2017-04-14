@@ -8,8 +8,6 @@ gobwas@gmail.com
 https://github.com/gobwas
 @gobwas
 
-\ʕ◔ϖ◔ʔ/
-
 * 
 
 .image media/image/qr.png
@@ -17,9 +15,9 @@ https://github.com/gobwas
 
 * О чем речь?
 
-* События
+* Состояние и события
 
-Совсем глобально – речь про состояние и *события* – _информацию_об_изменениях_состояния_.
+Совсем глобально – речь про состояние и _информацию_о_его_измениниях_ – событиях.
 
 Наличие или отсутствие реакции на события имеет свою цену.
 Скорость реакции тоже.
@@ -41,12 +39,11 @@ https://github.com/gobwas
 
 * WebSocket
 
-Бинарный протокол обмена сообщениями между браузером и сервером.
-Полнодуплексный – работает в обе стороны.
+Бинарный полнодуплексный протокол общения между браузером и сервером.
 
 Стандартизован в 2011г. как [[https://tools.ietf.org/html/rfc6455][RFC6455]].
 
-Использует HTTP Upgrade запрос в качестве рукопожатия с сервером.
+Использует HTTP Upgrade в качестве рукопожатия с сервером.
 
 Поддерживается всеми современными браузерами.
 
@@ -54,25 +51,27 @@ https://github.com/gobwas
 
 * Состояние
 
-Чем является состояние для любого сервиса почты?
+Какие данные содержит _состояние_ почты?
 
 - письма в ящике
 - пометки о прочтении
 - срок жизни сессии
 - ...
 
-* Сегодня
+* События
 
 Как пользователь узнает об изменении ящика?
 
 Поллинг каждые 2 минуты:
 
-- 100 тысяч запросов в секунду
+- 3 миллиона запросов в минуту
 - 60% ответов - [[https://tools.ietf.org/html/rfc7232#section-4.1][304 Not Modified]]
 
 .image media/image/pollmail.jpeg 330 _
 
-* Завтра
+* События
+
+Как хочется, чтобы пользователь узнавал об изменении ящика?
 
 Мгновенные уведомления об изменении состояния ящика:
 
@@ -83,11 +82,22 @@ https://github.com/gobwas
 
 * План
 
-Было:
+Как было изначально:
 .code media/diagram/00_history.txt
 
-Стало:
-.code media/diagram/02_target.txt
+* План
+
+Pub/Sub в почте:
+.code media/diagram/01_pubsub.txt
+
+* План
+
+Pub/Sub в почте:
+.code media/diagram/pubsub_mail.txt
+
+.caption *Storage* - _publisher_, хранилище ящиков пользователей
+.caption *Rebus* - _message_broker_, или шина событий
+.caption *Notifier* - _subscriber_, WebSocket сервер
 
 * 
 .image media/image/01_simplicity.jpg 500 _
@@ -111,39 +121,68 @@ https://github.com/gobwas
 
 * Практика
 
-* Publisher/Subscriber
+* Pub/Sub роутинг
 
-В связи с большой нагрузкой на сеть стратегии роутинга multicasting и gossiping не рассматривались.
+Фильтрация событий происходит и в rebus (_message_broker_) и в notifier (_subscriber_).
 
-Фильтрацию сообщений можно реализовать прямо в памяти с помощью хэш-таблиц или деревьев.
+База данных или таблицы и деревья в памяти:
 
-Или просто взять любую базу данных.
-
-TODO TRIE
+.code media/diagram/04_trie.txt
 
 * WebSocket
 
-Весьма простой бинарный протокол.
+Handshake:
 
-Имеет Ping/Pong. Close/Close со статусами ответов.
-Есть фреймы двух видов Binary и Text.
-Существует Continuation.
+.code media/code/upgrade.txt
+
+Так же поддерживает выбор расширений и выбор протокола уровня прилоежения ([[https://tools.ietf.org/html/rfc6455#section-11.3.2][Sec-WebSocket-Extensions]] и [[https://tools.ietf.org/html/rfc6455#section-11.3.4][Sec-WebSocket-Protocol]])
+
+* WebSocket
+
+Внутри соединения оперирует фреймами:
+
+- ping/pong
+- close
+- binary
+- text
+
+Поддерживает фрагментацию пакетов.
+
+* WebSocket
 
 Все браузеры действительно поддерживают [[https://tools.ietf.org/html/rfc6455][RFC6455]].
 
-Но есть особенности:
+Есть особенности:
 
-- Chrome не дожидается ответного `Close` фрейма и сразу закрывает соединение;
-- Firefox периодически посылает `Ping` фреймы, ожидая в ответ `Pong`;
-- IE периодически посылает.. `Pong` фреймы, что не противоречит спецификации.
+- Chrome не дожидается ответного `Close` фрейма и сразу закрывает соединение
+- Firefox периодически посылает `Ping` фреймы, ожидая в ответ `Pong`
+- IE периодически посылает.. `Pong` фреймы (но это не противоречит спецификации)
 
-Многие предлагают использовать [[https://tools.ietf.org/html/rfc7692][Compression Extensions]].
+* Миллион WebSockets
 
-* WebSocket
+Время жизни соединения – от нескольких секунд до *нескольких*дней*.
 
-Внутри фреймов конверты [[https://jsonrpc.org][JSONRPC]].
+При разрыве соединения клиенты переподключаются.
 
-TODO messages
+Если что-то идет не так – клиенты начинают self DDOS.
+
+.image media/image/selfddos.png 200 _
+.image media/image/cat.jpeg 200 _
+
+* JSONRPC
+
+На уровне приложения используется [[https://jsonrpc.org][JSONRPC]]:
+	
+	$> { "id": 42, "method": "subscribe", "params": ... }
+	$< { "id": 42, "result": ... }
+
+Некоторые технические сообщения:
+
+- `ping` на уровне websocket/jsonrpc
+- `shutdown` - при graceful рестартах
+- `sleep` - при вынужденных "жестких" рестартах
+
+* Go
 
 * WebSocket
 
@@ -151,23 +190,38 @@ TODO messages
 
 - [[golang.org/x/net/websocket][x/net/websocket]]
 - [[github.com/gorilla/websocket][gorilla/websocket]]
-- [[github.com/gobwas/ws][gobwas/ws]]
+- [[github.com/gobwas/ws][gobwas/ws]] (?!)
 
 .html media/html/01_plugin.html
 
-* 1 Миллион Соединений
+* Миллион WebSockets
 
-- Время жизни соединения – от нескольких секунд до нескольких часов;
-- Чтобы однозначно понять статус соединения лучше использовать ping на уровне протокола приложения; 
-- Если что-то пойдет не так – можно устроить self DDOS;
+Реализация соединения в идиомах Go.
 
-* 1 Миллион Соединений
+.code media/code/00_memory.go /DECL>/,/DECL</
 
-Реализации в идиомах Go будут потреблять много памяти:
+* Миллион WebSockets
 
-.code media/code/00_memory.go /START/,/END/
+Независимо от библиотеки, реализация в идиомах Go будут потреблять много памяти:
 
-* Как работает runtime?
+.code media/code/00_memory.go /IMPL>/,/IMPL</
+
+* Миллион WebSockets
+
+Соединения относительно долго бездействуют.
+Какие можно применить оптимизации, зная этот факт?
+
+Что, если бы горутины знали, когда к ним придут данные?	
+	
+	ReadBuf + WriteBuf = 8192
+	2 x Goroutine      = 8192
+	ChanBuf            = 4096
+
+Можно было бы освободить около *20GB* памяти (20KB с каждого соединения).
+
+* Как работает go runtime?
+
+* Runtime poll wait
 
 Что происходит, когда мы говорим `conn.Read()`?
 
@@ -178,8 +232,8 @@ TODO messages
 		}
 	}	
 
-- внутри Go сокеты не блокирующие;
-- на Linux `runtime_poll*` реализованы с помощью `epoll`;
+- внутри Go сокеты не блокирующие
+- на Linux `runtime_poll*` реализованы с помощью `epoll`
 - что мешает на использовать epoll для своих нужд? 
 
 * epoll
@@ -189,51 +243,48 @@ TODO messages
 epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/man7/epoll.7.html][_man_epoll_]].
 
 Основная идея выглядит так:
-
-	func (ch *Channel) Receive() error {
-		buf := bufio.NewReader(ch.conn) // Allocation only when need!
-		for {
-			readPacket(buf)
-			// ...
-		}
-	}
-
+	
 	ep := epoll.New()
 
-	// Add add always with EPOLLONESHOT.
-	ep.Add(ch.conn, EPOLLIN, func() {
-		if err := ch.Receive(); err == nil {
-			epoll.Resume(ch.conn)		
-		}
+	ep.Add(ch.conn, EPOLLIN | EPOLLONESHOT, func() {
+		ch.Receive()
+		epoll.Add(ch.conn)
 	})
 
-* Больше контроля за ресурсами
+	// Receive reads from net.Conn in blocking mode.
+	func (ch *Channel) Receive() error {
+		buf := bufio.NewReader(ch.conn) // Allocation only when we need!
+		readPacket(buf)
+		...
+	}
 
-Что если вдруг большинство соединений решат отправить нам сообщение?
+* Контроль за ресурсами
+
+Что, если вдруг все соединения решат отправить нам сообщение?
 
 Тогда реализация с epoll ничем не будет отличаться от ресурсоемкой idiomatic-way реализации.
 
 Решение – пул горутин.
 
-* Больше контроля за ресурсами
+* Goroutine pool
 
 .code media/code/01_pool.go /START/,/END/
 
-* Больше контроля за ресурсами
+* Goroutine pool
 
 Переиспользование `bufio.Reader` с помощью `sync.Pool` позволяет зафиксировать количество потребляемой памяти.
 
 При желании пул можно сделать "резиновым".
 
-	p := pool.New(128) // 128 goroutines pool.
+	p := pool.New(128)
 	
-	epoll.Add(ch.conn, EPOLLIN, func() {
+	epoll.Add(ch.conn, EPOLLIN | EPOLLONESHOT, func() {
 		pool.Schedule(ch.Receive)
 	})
 
-* Write 
+* Запись 
 
-С `Write()` дело обстоит проще, так как мы всегда знаем, когда хотим что-то записать в соединение.
+С `Write()` дело обстоит проще – мы всегда знаем, когда хотим что-то записать в соединение.
 
 Сложный момент – синхронизация отправляемых пакетов:
 
@@ -258,9 +309,22 @@ epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/ma
 		ws.WriteFrame(conn, ws.NewTextFrame(...))
 	})
 	
-* Zero-copy Upgrade
+* Zero-copy upgrade
 
-Зачем нужна куча аллокаций внутри `net/http`, когда нам нужно все это только один раз?
+Работа со стандартным сервером из `net/http` выглядит примерно так:
+
+	http.ListenAndServe(..., func(w http.ResponseWriter, r *http.Request) {
+		conn, rw, err := ws.Upgrade(r, w)
+		...
+	})
+
+При парсинге запроса и заполнении `http.Request` происходит большое количество копирований.
+
+Если после `Upgrade` не возвращать буфер соединения в `http.putBufioReader`, то это еще 8KB на соединение.
+
+* Zero-copy upgrade
+
+Имея свою библиотеку можно запилить zero-copy upgrade:
 
 	ln, _ := net.Listen("tcp", ":8888")
 
@@ -270,38 +334,54 @@ epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/ma
 		// ...
 	}
 
-// Benchmarks here
+Бенчмарки:
+
+	BenchmarkUpgradeHTTP/lowercase-4        300000              5156 ns/op            8576 B/op          9 allocs/op
+	BenchmarkUpgradeTCP/lowercase-4        2000000               973 ns/op               0 B/op          0 allocs/op
+
+.caption В случае простого Upgrade без сохранения значений Sec-WebSocket-Protocol и Sec-WebSocket-Extensions.
+.caption Код бенчмарков [[https://github.com/gobwas/ws/blob/master/server_test.go#L274][тут]].
 
 
-* Zero copy upgrade
+* Все вместе
 
-При использовании с `pool` можно избегать плохих overload ситуаций:
+При использовании с `pool` можно вообще не принимать соединения, если ресурсов больше нет:
 
 	ln, _ := net.Listen("tcp", ":8888")
 
 	for {
-		conn, _ := ln.Accept()
-
 		err := pool.ScheduleTimeout(func() {
+			conn, _ := ln.Accept()
 			ws.UpgradeConn(conn)
 			// ...
 		})
 		if err != nil {
-			writeNextUpstreamError(conn)
-			
-			// Handle temporary error like net/http does.
+			writeNextUpstreamError(conn)	
 			time.Sleep(...)
 		}
 	}
 
-* Nginx
+* Немного архитектуры
 
-- Разделить соединения одного процесса на несколько;
-- Помогает с DDOS;
-- Использовать `proxy_next_upstream`
+Go приложение запускается в нескольких экземплярах и мониторится супрвизором.
 
-* Graceful restart
+Перед ним стоит nginx, который берет на себя SSL и балансировку между процессами.
 
-- supervisord
-- start N instances, wait, stop N instances;
-- shutdown message in all parties;
+Все слои такой организации получились независимыми и масштабируемым:
+
+.code media/code/scale.txt
+
+* Итог
+
+* Немного статистики
+
+Все описанные выше решения реализованы и работают, хоть пока еще и не всегда, в production.
+
+- живых соединений 2.6 миллиона
+- уведомлений от storage 30 тысяч в секунду
+- уведомлений по WebSocket 6 тысяч в секунду
+
+* 
+
+.image media/image/wsmail.jpeg 400 _
+.caption PROFIT

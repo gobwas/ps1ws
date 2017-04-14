@@ -1,5 +1,6 @@
 // START OMIT
-func (ch *Channel) sendPacket(pkt Packet) {
+func (ch *Channel) Send(pkt Packet) {
+	ch.queued++
 	ch.spawnWriterMaybe()
 	ch.queue <- pkt
 }
@@ -8,14 +9,10 @@ func (ch *Channel) spawnWriterMaybe() {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
 
-	ch.queued++
-
-	if ch.writing {
-		return
+	if !ch.writing {
+		ch.writing = true
+		go ch.writer()
 	}
-
-	ch.writing = true
-	go ch.writer()
 }
 
 // END OMIT

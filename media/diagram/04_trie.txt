@@ -1,0 +1,16 @@
+└──*──[ #1 ] // All events
+   |
+   └──Publisher
+	   │	
+       ├──"storage"──[ #2 ] // All events from "storage"
+       │      │
+       │      └──Event
+       │          │
+       │          └──"change"──[ #3 ] // All "change" events from "storage"
+       │                 │
+       │                 └──Email
+       │                      ├──"foo@mail.ru"──[ #4 ]
+       │                      └──"bar@mail.ru"──[ #5 ]
+       └──"session"──[]
+              │
+              └──...
