@@ -11,7 +11,7 @@ https://github.com/gobwas
 * 
 
 .image media/image/qr.png
-.html media/html/02_qr.html
+.html media/html/qr.html
 
 * О чем речь?
 
@@ -35,7 +35,7 @@ https://github.com/gobwas
 
 В качестве шины событий может выступать промежуточный сервер (_message_broker_).
 
-.code media/diagram/01_pubsub.txt
+.code media/diagram/pubsub.txt
 
 * WebSocket
 
@@ -83,12 +83,12 @@ https://github.com/gobwas
 * План
 
 Как было изначально:
-.code media/diagram/00_history.txt
+.code media/diagram/history.txt
 
 * План
 
 Pub/Sub в почте:
-.code media/diagram/01_pubsub.txt
+.code media/diagram/pubsub.txt
 
 * План
 
@@ -100,7 +100,7 @@ Pub/Sub в почте:
 .caption *Notifier* - _subscriber_, WebSocket сервер
 
 * 
-.image media/image/01_simplicity.jpg 500 _
+.image media/image/simplicity.jpg 500 _
 .caption "Thaaat's right, Dude. The beauty of this is its simplicity. If the plan gets too complex something always goes wrong."
 .caption _Walter._Big_Lebowski._
 
@@ -117,8 +117,6 @@ Pub/Sub в почте:
 - есть трудности работы с большим количеством соединений
 - есть много трудностей с большим количеством соединений
 
-#.code media/diagram/process.txt
-
 * Практика
 
 * Pub/Sub роутинг
@@ -127,7 +125,7 @@ Pub/Sub в почте:
 
 База данных или таблицы и деревья в памяти:
 
-.code media/diagram/04_trie.txt
+.code media/diagram/trie.txt
 
 * WebSocket
 
@@ -192,19 +190,19 @@ Handshake:
 - [[github.com/gorilla/websocket][gorilla/websocket]]
 - [[github.com/gobwas/ws][gobwas/ws]] (?!)
 
-.html media/html/01_plugin.html
+.html media/html/plugin.html
 
 * Миллион WebSockets
 
 Реализация соединения в идиомах Go.
 
-.code media/code/00_memory.go /DECL>/,/DECL</
+.code media/code/memory.go /DECL>/,/DECL</
 
 * Миллион WebSockets
 
 Независимо от библиотеки, реализация в идиомах Go будут потреблять много памяти:
 
-.code media/code/00_memory.go /IMPL>/,/IMPL</
+.code media/code/memory.go /IMPL>/,/IMPL</
 
 * Миллион WebSockets
 
@@ -268,7 +266,7 @@ epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/ma
 
 * Goroutine pool
 
-.code media/code/01_pool.go /START/,/END/
+.code media/code/pool.go /START/,/END/
 
 * Goroutine pool
 
@@ -288,7 +286,7 @@ epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/ma
 
 Сложный момент – синхронизация отправляемых пакетов:
 
-.code media/code/02_write.go /START/,/END/
+.code media/code/write.go /START/,/END/
 
 * github.com/gobwas/ws
 
@@ -361,6 +359,8 @@ epoll - I/O event notification facility (c) [[http://man7.org/linux/man-pages/ma
 		}
 	}
 
+* Итог
+
 * Немного архитектуры
 
 Go приложение запускается в нескольких экземплярах и мониторится супрвизором.
@@ -371,7 +371,6 @@ Go приложение запускается в нескольких экзе�
 
 .code media/code/scale.txt
 
-* Итог
 
 * Немного статистики
 
